@@ -58,7 +58,7 @@ if question:
                 response.raise_for_status() 
                 #from response object we get data through json body
                 data = response.json()
-                answer=data['answer']
+                answer=data["answer"]
 
                 st.markdown(answer)
 

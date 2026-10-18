@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from src.schemas import ChatResponse, ChatRequest
 from src.graph import chatbot
 import logging
+from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +21,12 @@ def chat(request:ChatRequest)->ChatResponse:
     try:
         response=chatbot.invoke(
             {
-                "user_input":request.question
+                "messages":[
+                    HumanMessage(content=request.question)
+                ]
             }
         )
-        logger.info("Suuccessfully invoked")
+        logger.info("Successfully invoked")
         answer = response["answer"]
 
         return ChatResponse(answer=answer)

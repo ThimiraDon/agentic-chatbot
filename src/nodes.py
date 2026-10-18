@@ -21,12 +21,12 @@ def chatbot_node(state:ChatState)->dict:
     """
     Generate the answer using the LLM.
     """
-    user_query=state['user_input']
+    user_query=state["messages"]
 
     response=llm.invoke(user_query)
 
     return {
-        "messages":response.content
+        "messages":[response]
     }
 
 
@@ -35,7 +35,7 @@ def response_node(state:ChatState)->dict:
     Validate and prepare the answer for the final output
     """
 
-    final_answer=state["messages"]
+    final_answer=state["messages"][-1].content
 
     if not isinstance(final_answer, str) or not final_answer.strip():
         raise ValueError("The LLM returned an empty response.")
