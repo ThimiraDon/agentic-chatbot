@@ -48,19 +48,23 @@ if question:
                 #sends an HTTP POST request to a server
                 #@app.post("/") decorator registers a POST endpoint at /.
                 # Your frontend must send a POST request to that path.
-                response = requests.post(
-                    f"{API_URL}/",
+                with requests.post(
+                    f"{API_URL}/tangi",
                     json={"question":question},#question-backend expects a request matching its Pydantic schema:
+                    stream=True,
                     timeout=120
-                )
+                ) as response:
 
-                #check the backend status code continue if 200 OK otherwise raise an error
-                response.raise_for_status() 
-                #from response object we get data through json body
-                data = response.json()
-                answer=data["answer"]
-
-                st.markdown(answer)
+                    #check the backend status code continue if 200 OK otherwise raise an error
+                    response.raise_for_status() 
+                    ## Read and display chunks progressively
+                    answer=st.write_stream(
+                        response.iter_content(
+                            chunk_size=None,
+                            decode_unicode=True
+                        )
+                    )
+                
 
                 st.session_state.messages.append({
                     "role":"assistant",
@@ -77,6 +81,3 @@ if question:
                 )
             except requests.exceptions.RequestException as exc:
                 st.error(f"API request failed: {exc}")
-
-            except (ValueError, KeyError):
-                st.error("The API returned an invalid response.")
