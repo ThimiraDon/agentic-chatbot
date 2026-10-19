@@ -15,4 +15,5 @@ graph.add_edge('chatbot_node','response_node')
 graph.add_edge('response_node',END)
 
 #COMPILE THE GRAPH
-chatbot=graph.compile()
+def build_graph(checkpointer):
+    return graph.compile(checkpointer=checkpointer)

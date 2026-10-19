@@ -8,6 +8,7 @@ class ChatRequest(BaseModel):
         max_length=10000,
         description="user's input message"
     )
+    thread_id:str
 
 class ChatResponse(BaseModel):
     answer:str
