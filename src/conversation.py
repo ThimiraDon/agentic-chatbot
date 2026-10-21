@@ -73,3 +73,12 @@ def update_conversation(thread_id: str, title: str | None = None):
             )
 
 
+def delete_conversation(thread_id: str):
+    with pool.connection() as conn:
+        conn.execute(
+            """
+            DELETE FROM conversations
+            WHERE thread_id = %s;
+            """,
+            (thread_id,),
+        )
