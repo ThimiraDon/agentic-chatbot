@@ -60,6 +60,7 @@ agentic-chatbot/
 ├── .env
 ├── pyproject.toml
 ├── uv.lock
+├── main.py
 └── README.md
 ```
 
