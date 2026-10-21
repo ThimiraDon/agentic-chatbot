@@ -3,6 +3,10 @@ import requests
 from langchain_tavily import TavilySearch
 from dotenv import load_dotenv
 import os
+from src.rag.retrieval import RetrievalService
+
+
+_retrieval_service = None
 
 load_dotenv()
 
@@ -13,6 +17,70 @@ search_tool=TavilySearch(
     search_depth="advanced"
 )
 
+#GET RAG TOOL ================================================================================
+
+# =========================================================
+# RAG KNOWLEDGE-BASE TOOL
+# =========================================================
+
+# Create the service only when the tool is first called.
+# This avoids loading the embedding model during module import.
+_retrieval_service = None
+
+
+@tool
+def search_knowledge_base(question: str) -> str:
+    """Search uploaded PDF documents for information relevant to a question.
+
+    Use this tool when the answer may be found in the user's uploaded
+    documents. Return the retrieved excerpts with their source and page.
+    """
+    global _retrieval_service
+
+    if not question.strip():
+        return "Please provide a question to search for."
+
+    try:
+        if _retrieval_service is None:
+            _retrieval_service = RetrievalService()
+
+        documents = _retrieval_service.retrieve(
+            question=question,
+            top_k=5,
+            namespace="default",
+        )
+
+        if not documents:
+            return "No relevant information was found in the knowledge base."
+
+        results = []
+
+        for number, document in enumerate(documents, start=1):
+            source = document.metadata.get("source", "Unknown")
+            page = document.metadata.get("page")
+
+            # PyPDFLoader page numbers start at zero.
+            page_label = (
+                page + 1 if isinstance(page, int) else "Unknown"
+            )
+
+            results.append(
+                f"Result {number}\n"
+                f"Source: {source}\n"
+                f"Page: {page_label}\n"
+                f"Content:\n{document.page_content}"
+            )
+
+        return "\n\n---\n\n".join(results)
+
+    except Exception:
+        import logging
+
+        logging.getLogger(__name__).exception(
+            "Knowledge-base search failed."
+        )
+        return "Knowledge-base search failed. Check the application logs."
+    
 
 #GET WEATHER TOOL ============================================================================
 @tool
@@ -417,4 +485,4 @@ def calculator(expression: str) -> str:
             "outside the permitted limits."
         )
 
-tools = [get_weather,calculator,search_tool]
+tools = [get_weather,calculator,search_tool,search_knowledge_base]

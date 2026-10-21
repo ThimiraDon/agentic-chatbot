@@ -4,6 +4,13 @@ from src.graph import build_graph
 import logging
 from langchain_core.messages import HumanMessage
 
+import shutil
+import tempfile
+from pathlib import Path
+
+from fastapi import File, UploadFile
+from src.rag.ingestion import IngestionService
+
 import json
 from contextlib import asynccontextmanager
 from src.checkpointer import create_checkpointer,pool
@@ -232,3 +239,63 @@ def delete_conversation_endpoint(thread_id: str):
             status_code=500,
             detail="Could not delete conversation"
         ) from exc
+
+
+
+
+@app.post("/documents/upload")
+def upload_document(file: UploadFile = File(...)) -> dict:
+    """Upload a PDF and ingest its text into Pinecone."""
+
+    # Accept PDF files only.
+    if not file.filename or Path(file.filename).suffix.lower() != ".pdf":
+        raise HTTPException(
+            status_code=400,
+            detail="Only PDF files are supported.",
+        )
+
+    temp_path = None
+
+    try:
+        # Save the upload temporarily so PyPDFLoader can read it.
+        with tempfile.NamedTemporaryFile(
+            suffix=".pdf",
+            delete=False,
+        ) as temp_file:
+            temp_path = Path(temp_file.name)
+            shutil.copyfileobj(file.file, temp_file)
+
+        # Ingest the PDF into the default Pinecone namespace.
+        ingestion_service = IngestionService()
+        result = ingestion_service.ingest_pdf(
+            file_path=temp_path,
+            namespace="default",
+        )
+
+        logger.info(
+            "PDF ingestion completed: %s",
+            result["source"],
+        )
+
+        return {
+            "message": "PDF uploaded and ingested successfully.",
+            **result,
+        }
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        logger.exception("PDF upload or ingestion failed.")
+
+        raise HTTPException(
+            status_code=500,
+            detail="PDF ingestion failed. Check the application logs.",
+        ) from exc
+
+    finally:
+        # Always clean up the temporary file.
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+        file.file.close()

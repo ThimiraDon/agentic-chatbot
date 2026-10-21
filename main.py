@@ -56,6 +56,51 @@ with st.sidebar:
         st.session_state.messages=[]
         st.rerun()
 
+    
+    st.divider()
+    st.subheader("📄 Knowledge Base")
+
+    uploaded_file = st.file_uploader(
+        "Upload a PDF document",
+        type=["pdf"],
+        help="Upload a PDF to make its contents searchable by the AI.",
+    )
+
+    if st.button(
+        "Upload and process PDF",
+        use_container_width=True,
+        disabled=uploaded_file is None,
+    ):
+        try:
+            with st.spinner("Uploading and processing PDF..."):
+                response = requests.post(
+                    f"{API_URL}/documents/upload",
+                    files={
+                        "file": (
+                            uploaded_file.name,
+                            uploaded_file.getvalue(),
+                            "application/pdf",
+                        )
+                    },
+                    timeout=300,
+                )
+                response.raise_for_status()
+                result = response.json()
+
+            st.success(result.get("message", "PDF processed successfully."))
+
+            st.write(f"**File:** {result.get('source', uploaded_file.name)}")
+            st.write(f"**Pages loaded:** {result.get('pages_loaded', 'N/A')}")
+            st.write(f"**Chunks created:** {result.get('chunks_created', 'N/A')}")
+            st.write(f"**Chunks stored:** {result.get('chunks_stored', 'N/A')}")
+
+        except requests.exceptions.Timeout:
+            st.error("The upload timed out. Check the backend before retrying.")
+
+        except requests.exceptions.RequestException as exc:
+            st.error(f"PDF upload failed: {exc}")
+
+
     st.divider()
     st.subheader("Your Conversations")
 
